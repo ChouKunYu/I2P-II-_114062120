@@ -60,7 +60,11 @@ int MiniMax::eval_ctx(
     }
 
     /* === Negamax loop === */
+    std::sort(state->legal_actions.begin(), state->legal_actions.end(), [state](const Move& a, const Move& b){
+        return state->score_move(a) > state->score_move(b);
+    });
     int best_score = M_MAX;
+    bool first_move = true;
 
     for(auto& action : state->legal_actions){
         // [ Hackathon TODO 3-2 ]
@@ -69,13 +73,26 @@ int MiniMax::eval_ctx(
 
         bool same = next->same_player_as_parent();
 
+        int score;
+
+        if (first_move){
+            int raw_score = eval_ctx(next, depth-1, history, ply+1, ctx, p, -beta, -alpha);
+            score = same ? raw_score : -raw_score;
+            first_move = false;
+        } else{
+            int raw_score = eval_ctx(next, depth-1, history, ply+1, ctx, p, -alpha-1, -alpha);
+            score = same ? raw_score : -raw_score;
+            if (score > alpha && score < beta){
+                raw_score = eval_ctx(next, depth-1, history, ply+1, ctx, p, -beta, -alpha);
+                score = same ? raw_score : -raw_score;
+            }
+        }
+
         // [Hackathon TODO 3-3]
         // search the child one level deeper
-        int raw_score = eval_ctx(next, depth-1, history, ply+1, ctx, p, -beta, -alpha);
 
         // [Hackathon TODO 3-4]
         // convert raw to the current player's perspective.
-        int score = same ? raw_score : -raw_score;
 
         delete next;
 
@@ -118,11 +135,16 @@ SearchResult MiniMax::search(
         state->get_legal_actions();
     }
 
-    int alpha = M_MAX-100;
-    int beta = P_MAX + 100;
+    std::sort(state->legal_actions.begin(), state->legal_actions.end(), [state](const Move& a, const Move& b){
+        return state->score_move(a) > state->score_move(b);
+    });
+    
+    int alpha = M_MAX - 10;
+    int beta = P_MAX + 10;
     int best_score = M_MAX - 10;
     int move_index = 0;
     int total_moves = (int)state->legal_actions.size();
+    bool first_move = true;
 
     for(auto& action : state->legal_actions){
         /* [ Hackathon TODO 4-1 ]
@@ -130,16 +152,28 @@ SearchResult MiniMax::search(
         State *next = state->next_state(action);
 
         bool same = next->same_player_as_parent();
+        int score;
+        
+        if (first_move){
+            int raw_score = eval_ctx(next, depth-1, history, 1, ctx, p, -beta, -alpha);
+            score = same ? raw_score : -raw_score;
+            first_move = false;
+        } else{
+            int raw_score = eval_ctx(next, depth-1, history, 1, ctx, p, -alpha-1, -alpha);
+            score = same ? raw_score : -raw_score;
 
-        int raw_score = eval_ctx(next, depth-1, history, 1, ctx, p, -beta, -alpha);
-
-        int score = same ? raw_score : -raw_score;
+            if (score > alpha && score < beta){
+                raw_score = eval_ctx(next, depth-1, history, 1, ctx, p, -beta, -alpha);
+                score = same ? raw_score : -raw_score;
+            }
+        }
 
         delete next;
 
         if(score > best_score){
             // [ Hackathon TODO 4-2 ]
-            // keep this move if it is the best so far                best_score = score;
+            // keep this move if it is the best so far
+            best_score = score;
             result.best_move = action;    
 
             if(p.report_partial && ctx.on_root_update){
