@@ -169,7 +169,18 @@ int State::evaluate(
     return self_score - oppn_score + bonus;
 }
 
+int State::score_move(const Move& m) const{
+    int victim = board.board[1-player][m.second.first][m.second.second];
+    int attacker = board.board[player][m.first.first][m.first.second];
 
+    if (victim > 0){
+        return 100*PIECE_VALUES[victim] - PIECE_VALUES[attacker];
+    }
+    if (attacker == 1 && (m.second.first == 0 || m.second.first == BOARD_H - 1)){
+        return 90;
+    }
+    return 0;
+}
 
 /*============================================================
  * Zobrist hash for transposition table

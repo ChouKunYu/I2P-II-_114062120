@@ -49,6 +49,7 @@ public:
         bool use_mobility = true,
         const GameHistory* history = nullptr
     ) override;
+    int score_move(const Move& m) const;
     State* next_state(const Move& move) override;
     void get_legal_actions() override;
     void get_legal_actions_naive();
