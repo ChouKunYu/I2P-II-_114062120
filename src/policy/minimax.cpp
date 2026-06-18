@@ -1,7 +1,7 @@
 #include <utility>
+#include <algorithm>
 #include "state.hpp"
 #include "minimax.hpp"
-
 
 /*============================================================
  * MiniMax — eval_ctx
@@ -14,7 +14,9 @@ int MiniMax::eval_ctx(
     GameHistory& history,
     int ply,
     SearchContext& ctx,
-    const MMParams& p
+    const MMParams& p,
+    int alpha,
+    int beta
 ){
     ctx.nodes++;
     if(ply > ctx.seldepth){
@@ -69,7 +71,7 @@ int MiniMax::eval_ctx(
 
         // [Hackathon TODO 3-3]
         // search the child one level deeper
-        int raw_score = eval_ctx(next, depth-1, history, ply+1, ctx, p);
+        int raw_score = eval_ctx(next, depth-1, history, ply+1, ctx, p, -beta, -alpha);
 
         // [Hackathon TODO 3-4]
         // convert raw to the current player's perspective.
@@ -83,6 +85,12 @@ int MiniMax::eval_ctx(
             best_score = score;
         }
 
+        if (score > alpha){
+            alpha = score;
+        }
+        if (alpha >= beta){
+            break;
+        }
     }
 
     history.pop(state->hash());
@@ -110,7 +118,8 @@ SearchResult MiniMax::search(
         state->get_legal_actions();
     }
 
-
+    int alpha = M_MAX-100;
+    int beta = P_MAX + 100;
     int best_score = M_MAX - 10;
     int move_index = 0;
     int total_moves = (int)state->legal_actions.size();
@@ -122,33 +131,32 @@ SearchResult MiniMax::search(
 
         bool same = next->same_player_as_parent();
 
-        int raw_score = eval_ctx(next, depth-1, history, 1, ctx, p);
+        int raw_score = eval_ctx(next, depth-1, history, 1, ctx, p, -beta, -alpha);
 
         int score = same ? raw_score : -raw_score;
 
         delete next;
 
-            if(score > best_score){
-                // [ Hackathon TODO 4-2 ]
-                // keep this move if it is the best so far
-                best_score = score;
-                result.best_move = action;
-                
+        if(score > best_score){
+            // [ Hackathon TODO 4-2 ]
+            // keep this move if it is the best so far                best_score = score;
+            result.best_move = action;    
 
-                if(p.report_partial && ctx.on_root_update){
-                   ctx.on_root_update({result.best_move, best_score, depth, move_index + 1, total_moves});
-                }
-            }  
+            if(p.report_partial && ctx.on_root_update){
+               ctx.on_root_update({result.best_move, best_score, depth, move_index + 1, total_moves});
+            }
+        } 
+        if (score > alpha){
+            alpha = score;
+        }
         move_index++;
     }
 
     // [ Hackathon TODO 4-3 ]
     // update result and return
     result.score = best_score;
-    
     return result;
 } 
-
 
 /*============================================================
  * MiniMax — default_params / param_defs
