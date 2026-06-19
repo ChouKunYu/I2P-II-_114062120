@@ -18,6 +18,13 @@ struct MMParams {
 
 class MiniMax{
 public:
+    static int quiescene(
+        State *state,
+        SearchContext& ctx,
+        const MMParams& p,
+        int alpha,
+        int beta
+    );
     static int eval_ctx(
         State *state,
         int depth,

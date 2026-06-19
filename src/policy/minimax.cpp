@@ -3,6 +3,42 @@
 #include "state.hpp"
 #include "minimax.hpp"
 
+int MiniMax::quiescene(
+    State *state,
+    SearchContext& ctx,
+    const MMParams& p,
+    int alpha,
+    int beta
+){
+    ctx.nodes++;
+    
+    int stand_pat = state->evaluate(p.use_kp_eval, p.use_eval_mobility, nullptr);
+    if (stand_pat >= beta){
+        return beta;
+    }
+    if (stand_pat > alpha){
+        alpha = stand_pat;
+    }
+    if (state->legal_actions.empty() && state->game_state == UNKNOWN){
+        state->get_legal_actions();
+    }
+
+    std::sort(state->legal_actions.begin(), state->legal_actions.end(), [state](const Move& a, const Move& b){
+        return state->score_move(a) > state->score_move(b);
+    });
+    for (auto& action : state->legal_actions){
+        int next_r = action.second.first;
+        int next_c = action.second.second;
+        bool is_capture = (state->board.board[1-state->player][next_r][next_c] > 0);
+        if (!is_capture) continue;
+        State *next = state->next_state(action);
+        int score = -quiescene(next, ctx, p, -beta, -alpha);
+        delete next;
+        if (score >= beta) return beta;
+        if (score > alpha) alpha = score;
+    }
+    return alpha;
+}
 /*============================================================
  * MiniMax — eval_ctx
  *
@@ -49,15 +85,11 @@ int MiniMax::eval_ctx(
     if(state->check_repetition(history, rep_score)){
         return rep_score;
     }
-    history.push(state->hash());
 
     if(depth <= 0){
-        int score = state->evaluate(
-            p.use_kp_eval, p.use_eval_mobility, &history
-        ); 
-        history.pop(state->hash());
-        return score;
+        return quiescene(state, ctx, p, alpha, beta);
     }
+    history.push(state->hash());
 
     /* === Negamax loop === */
     std::sort(state->legal_actions.begin(), state->legal_actions.end(), [state](const Move& a, const Move& b){
@@ -139,8 +171,8 @@ SearchResult MiniMax::search(
         return state->score_move(a) > state->score_move(b);
     });
     
-    int alpha = M_MAX - 10;
-    int beta = P_MAX + 10;
+    int alpha = M_MAX - 100;
+    int beta = P_MAX + 100;
     int best_score = M_MAX - 10;
     int move_index = 0;
     int total_moves = (int)state->legal_actions.size();
