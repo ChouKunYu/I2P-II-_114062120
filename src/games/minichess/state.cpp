@@ -169,6 +169,11 @@ int State::evaluate(
     return self_score - oppn_score + bonus;
 }
 
+/*============================================================
+ * MVV-LVA piece values for move ordering (from config.hpp)
+
+ * catch > become_queen > nothing
+ *============================================================*/
 int State::score_move(const Move& m) const{
     int victim = board.board[1-player][m.second.first][m.second.second];
     int attacker = board.board[player][m.first.first][m.first.second];
